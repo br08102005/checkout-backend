@@ -27,8 +27,7 @@ router.post("/create-order", async (req, res) => {
     });
   }
 
-  const unique = Math.floor(Math.random() * 99) + 1;
-  total += unique;
+  total = plan;
 
   const orderId = "ORD-" + Date.now();
 const { data, error } = await supabase

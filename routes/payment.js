@@ -1,43 +1,31 @@
-import express from "express";
-import { supabase } from "../supabase.js";
-
-console.log("🔥 payment.js carregado");
-
-const router = express.Router();
-
 router.post("/payment-webhook", async (req, res) => {
-  const { order_id, amount, reference } = req.body;
+  const { amount, reference } = req.body;
 
-  if (!order_id || !amount) {
+  if (!amount) {
     return res.status(400).json({
       success: false,
-      error: "Missing data"
+      error: "Missing amount"
     });
   }
 
-  // 1. Buscar pedido
+  // 1. procurar pedido pendente com esse valor
   const { data: order, error } = await supabase
     .from("orders")
     .select("*")
-    .eq("order_id", order_id)
+    .eq("status", "pending")
+    .eq("total", amount)
+    .order("created_at", { ascending: true })
+    .limit(1)
     .single();
 
   if (error || !order) {
     return res.status(404).json({
       success: false,
-      error: "Order not found"
+      error: "No matching pending order found"
     });
   }
 
-  // 2. Validar valor
-  if (Number(amount) !== Number(order.total)) {
-    return res.status(400).json({
-      success: false,
-      error: "Invalid payment amount"
-    });
-  }
-
-  // 3. Atualizar pedido como pago
+  // 2. atualizar como pago (LOCK)
   const { error: updateError } = await supabase
     .from("orders")
     .update({
@@ -45,7 +33,7 @@ router.post("/payment-webhook", async (req, res) => {
       paid_at: new Date().toISOString(),
       payment_reference: reference || null
     })
-    .eq("order_id", order_id);
+    .eq("id", order.id);
 
   if (updateError) {
     return res.status(500).json({
@@ -57,8 +45,6 @@ router.post("/payment-webhook", async (req, res) => {
   return res.json({
     success: true,
     message: "Payment confirmed",
-    order_id
+    order_id: order.order_id
   });
 });
-
-export default router;

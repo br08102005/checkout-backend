@@ -6,6 +6,7 @@ const router = express.Router();
 router.post("/create-order", async (req, res) => {
   const { name, email, phone, plan, extras } = req.body;
 
+  // preços base dos planos
   const plans = {
     3500: 3500,
     5000: 5000,
@@ -13,12 +14,14 @@ router.post("/create-order", async (req, res) => {
     10000: 10000
   };
 
+  // preços extras
   const extrasPrice = {
     extra1: 1000,
     extra2: 1500,
-    extra3: 2000
+    extra3: 2250
   };
 
+  // 1. calcular total corretamente
   let total = plans[plan] || 0;
 
   if (extras && Array.isArray(extras)) {
@@ -27,38 +30,42 @@ router.post("/create-order", async (req, res) => {
     });
   }
 
-  total = plan;
+  // ⚠️ IMPORTANTE: NÃO sobrescrever o total (bug removido)
 
+  // 2. criar ID do pedido
   const orderId = "ORD-" + Date.now();
-const { data, error } = await supabase
-  .from("orders")
-  .insert([
-    {
-      order_id: orderId,
-      name,
-      email,
-      phone,
-      plan,
-      total,
-      status: "pending"
-    }
-  ])
-  .select();
 
-if (error) {
-  return res.status(500).json({
-    success: false,
-    error: error.message
+  // 3. guardar no Supabase
+  const { data, error } = await supabase
+    .from("orders")
+    .insert([
+      {
+        order_id: orderId,
+        name,
+        email,
+        phone,
+        plan,
+        total,
+        status: "pending"
+      }
+    ])
+    .select();
+
+  if (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+
+  return res.json({
+    success: true,
+    order_id: orderId,
+    total,
+    order: data
   });
-}
+});
 
-return res.json({
-  success: true,
-  order_id: orderId,
-  total: total,
-  saved: data
-});
-});
 
 // GET ORDER BY ID
 router.get("/order/:id", async (req, res) => {

@@ -1,5 +1,6 @@
 import express from "express";
 import { supabase } from "../supabase.js";
+import { products } from "../products.js"; // ✅ ADICIONADO
 
 const router = express.Router();
 
@@ -48,13 +49,31 @@ router.post("/payment-webhook", async (req, res) => {
 
     const order = orders[0];
 
-    // 3. atualizar pedido
+    // 3. 🔥 GERAR LINKS (NOVO BLOCO ADICIONADO)
+    let links = [];
+
+    // produto principal
+    if (products[order.plan]) {
+      links.push(products[order.plan].link);
+    }
+
+    // extras
+    if (order.extras && Array.isArray(order.extras)) {
+      order.extras.forEach(extra => {
+        if (products[extra]) {
+          links.push(products[extra].link);
+        }
+      });
+    }
+
+    // 4. atualizar pedido
     const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update({
         status: "paid",
         paid_at: new Date().toISOString(),
-        payment_reference: reference || null
+        payment_reference: reference || null,
+        download_links: links // ✅ ADICIONADO
       })
       .eq("id", order.id)
       .eq("status", "pending")

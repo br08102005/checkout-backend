@@ -4,6 +4,7 @@ import express from "express";
 const router = express.Router();
 
 router.post("/create-order", async (req, res) => {
+  console.log(req.body);
   const { name, email, phone, plan, extras } = req.body;
 
   // preços base dos planos

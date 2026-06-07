@@ -5,7 +5,7 @@ router.post("/payment-webhook", async (req, res) => {
     return res.status(400).json({ success: false, error: "Missing amount" });
   }
 
-  // 1. EVITAR DUPLICADOS (idempotência simples)
+  // 1. evitar duplicados
   const { data: already } = await supabase
     .from("orders")
     .select("id")
@@ -13,30 +13,28 @@ router.post("/payment-webhook", async (req, res) => {
     .maybeSingle();
 
   if (already) {
-    return res.json({
-      success: true,
-      message: "Already processed"
-    });
+    return res.json({ success: true, message: "Already processed" });
   }
 
-  // 2. PEGAR PEDIDO MAIS ANTIGO
-  const { data: order, error } = await supabase
+  // 2. procurar pedido
+  const { data: orders, error } = await supabase
     .from("orders")
     .select("*")
     .eq("status", "pending")
     .eq("total", amount)
     .order("created_at", { ascending: true })
-    .limit(1)
-    .single();
+    .limit(1);
 
-  if (error || !order) {
+  if (error || !orders || orders.length === 0) {
     return res.status(404).json({
       success: false,
       error: "No matching order"
     });
   }
 
-  // 3. LOCK ATÓMICO (EVITA DUPLICAÇÃO EM TRÁFEGO ALTO)
+  const order = orders[0];
+
+  // 3. atualizar com proteção
   const { data: updated, error: updateError } = await supabase
     .from("orders")
     .update({
@@ -45,14 +43,14 @@ router.post("/payment-webhook", async (req, res) => {
       payment_reference: reference || null
     })
     .eq("id", order.id)
-    .eq("status", "pending") // 🔥 condição crítica
+    .eq("status", "pending")
     .select()
     .single();
 
   if (updateError || !updated) {
     return res.status(409).json({
       success: false,
-      error: "Order already taken by another process"
+      error: "Order already taken"
     });
   }
 

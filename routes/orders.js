@@ -4,7 +4,8 @@ import express from "express";
 const router = express.Router();
 
 router.post("/create-order", async (req, res) => {
-  console.log(req.body);
+  console.log("DADOS RECEBIDOS:", req.body);
+
   const { name, email, phone, plan, extras } = req.body;
 
   // preços base dos planos
@@ -25,18 +26,22 @@ router.post("/create-order", async (req, res) => {
   // 1. calcular total corretamente
   let total = plans[plan] || 0;
 
-  if (extras && Array.isArray(extras)) {
+  console.log("PLAN SELECIONADO:", plan);
+  console.log("EXTRAS RECEBIDOS:", extras);
+
+  if (Array.isArray(extras)) {
     extras.forEach(e => {
       total += extrasPrice[e] || 0;
     });
   }
 
-  // ⚠️ IMPORTANTE: NÃO sobrescrever o total (bug removido)
+  // 2. debug final do total
+  console.log("TOTAL CALCULADO:", total);
 
-  // 2. criar ID do pedido
+  // 3. criar ID do pedido
   const orderId = "ORD-" + Date.now();
 
-  // 3. guardar no Supabase
+  // 4. guardar no Supabase
   const { data, error } = await supabase
     .from("orders")
     .insert([

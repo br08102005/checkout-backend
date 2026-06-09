@@ -3,12 +3,25 @@ import express from "express";
 
 const router = express.Router();
 
+/* MAPA DE LINKS */
+const productLinks = {
+  3500: "LINK_PRODUTO_3500",
+  5000: "LINK_PRODUTO_5000",
+  7500: "LINK_PRODUTO_7500",
+  10000: "LINK_PRODUTO_10000"
+};
+
+const extrasLinks = {
+  extra1: "LINK_EXTRA_1",
+  extra2: "LINK_EXTRA_2",
+  extra3: "LINK_EXTRA_3"
+};
+
 router.post("/create-order", async (req, res) => {
   console.log("DADOS RECEBIDOS:", req.body);
 
   const { name, email, phone, plan, extras } = req.body;
 
-  // preços base dos planos
   const plans = {
     3500: 3500,
     5000: 5000,
@@ -16,34 +29,14 @@ router.post("/create-order", async (req, res) => {
     10000: 10000
   };
 
-  // preços extras
   const extrasPrice = {
     extra1: 1000,
     extra2: 1500,
     extra3: 2250
   };
 
-  // 1. calcular total corretamente
+  /* 1. calcular total */
   let total = plans[plan] || 0;
-
-  const links = [];
-
-// produto principal
-if (productLinks[plan]) {
-  links.push(productLinks[plan]);
-}
-
-// extras
-if (Array.isArray(extras)) {
-  extras.forEach(e => {
-    if (extrasLinks[e]) {
-      links.push(extrasLinks[e]);
-    }
-  });
-}
-
-  console.log("PLAN SELECIONADO:", plan);
-  console.log("EXTRAS RECEBIDOS:", extras);
 
   if (Array.isArray(extras)) {
     extras.forEach(e => {
@@ -51,26 +44,45 @@ if (Array.isArray(extras)) {
     });
   }
 
-  // 2. debug final do total
   console.log("TOTAL CALCULADO:", total);
 
-  // 3. criar ID do pedido
+  /* 2. gerar links */
+  const links = [];
+
+  // produto principal
+  if (productLinks[plan]) {
+    links.push(productLinks[plan]);
+  }
+
+  // extras
+  if (Array.isArray(extras)) {
+    extras.forEach(e => {
+      if (extrasLinks[e]) {
+        links.push(extrasLinks[e]);
+      }
+    });
+  }
+
+  console.log("LINKS GERADOS:", links);
+
+  /* 3. criar ID */
   const orderId = "ORD-" + Date.now();
 
-  // 4. guardar no Supabase
+  /* 4. guardar no Supabase */
   const { data, error } = await supabase
     .from("orders")
     .insert([
-{
-  order_id: orderId,
-  name,
-  email,
-  phone,
-  plan,
-  extras,
-  total,
-  status: "pending"
-}
+      {
+        order_id: orderId,
+        name,
+        email,
+        phone,
+        plan,
+        extras,
+        total,
+        status: "pending",
+        download_links: links.join("|")
+      }
     ])
     .select();
 
@@ -89,8 +101,7 @@ if (Array.isArray(extras)) {
   });
 });
 
-
-// GET ORDER BY ID
+/* GET ORDER */
 router.get("/order/:id", async (req, res) => {
   const { id } = req.params;
 

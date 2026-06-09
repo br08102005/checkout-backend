@@ -26,6 +26,22 @@ router.post("/create-order", async (req, res) => {
   // 1. calcular total corretamente
   let total = plans[plan] || 0;
 
+  const links = [];
+
+// produto principal
+if (productLinks[plan]) {
+  links.push(productLinks[plan]);
+}
+
+// extras
+if (Array.isArray(extras)) {
+  extras.forEach(e => {
+    if (extrasLinks[e]) {
+      links.push(extrasLinks[e]);
+    }
+  });
+}
+
   console.log("PLAN SELECIONADO:", plan);
   console.log("EXTRAS RECEBIDOS:", extras);
 
@@ -45,15 +61,16 @@ router.post("/create-order", async (req, res) => {
   const { data, error } = await supabase
     .from("orders")
     .insert([
-      {
-        order_id: orderId,
-        name,
-        email,
-        phone,
-        plan,
-        total,
-        status: "pending"
-      }
+{
+  order_id: orderId,
+  name,
+  email,
+  phone,
+  plan,
+  extras,
+  total,
+  status: "pending"
+}
     ])
     .select();
 

@@ -1,6 +1,5 @@
 import express from "express";
 import { supabase } from "../supabase.js";
-import { products } from "../products.js"; // ✅ ADICIONADO
 
 const router = express.Router();
 
@@ -15,7 +14,7 @@ router.post("/payment-webhook", async (req, res) => {
       });
     }
 
-    // 1. evitar duplicados
+    // evitar duplicados
     if (reference) {
       const { data: already } = await supabase
         .from("orders")
@@ -31,7 +30,7 @@ router.post("/payment-webhook", async (req, res) => {
       }
     }
 
-    // 2. procurar pedido pendente pelo valor
+    // procurar pedido pendente
     const { data: orders, error } = await supabase
       .from("orders")
       .select("*")
@@ -49,33 +48,15 @@ router.post("/payment-webhook", async (req, res) => {
 
     const order = orders[0];
 
-    // 3. 🔥 GERAR LINKS (NOVO BLOCO ADICIONADO)
-    let links = [];
-
-    // produto principal
-    if (products[order.plan]) {
-      links.push(products[order.plan].link);
-    }
-
-    // extras
-    if (order.extras && Array.isArray(order.extras)) {
-      order.extras.forEach(extra => {
-        if (products[extra]) {
-          links.push(products[extra].link);
-        }
-      });
-    }
-
-    // 4. atualizar pedido
+    // atualizar pedido para pago
     const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update({
         status: "paid",
         paid_at: new Date().toISOString(),
-        payment_reference: reference || null,
-        download_links: links // ✅ ADICIONADO
+        payment_reference: reference || null
       })
-      .eq("id", order.id)
+      .eq("order_id", order.order_id)
       .eq("status", "pending")
       .select()
       .single();

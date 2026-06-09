@@ -3,36 +3,24 @@ import express from "express";
 
 const router = express.Router();
 
-/* MAPA DE LINKS */
 const productLinks = {
   3500: "LINK_PRODUTO_3500",
-  5000: "LINK_PRODUTO_5000",
-  7500: "LINK_PRODUTO_7500",
-  10000: "LINK_PRODUTO_10000"
+  5000: "LINK_PRODUTO_5000"
 };
 
-const extrasLinks = {
-  extra1: "LINK_EXTRA_1",
-  extra2: "LINK_EXTRA_2",
-  extra3: "LINK_EXTRA_3"
+const extrasPrice = {
+  extra1: 2250,
+  extra2: 1500,
+  extra3: 1000
 };
 
 router.post("/create-order", async (req, res) => {
   try {
-    console.log("DADOS RECEBIDOS:", req.body);
 
-    const {
-      name,
-      email,
-      phone,
-      plan,
-      extras = []
-    } = req.body || {};
-
-    /* ✅ NORMALIZAÇÃO (evita bugs futuros) */
+    const { name, email, phone, plan, extras = [] } = req.body || {};
     const safeExtras = Array.isArray(extras) ? extras : [];
 
-    /* 🔥 1. verificar pedido pendente */
+    /* 🔥 evitar duplicados */
     const { data: existing } = await supabase
       .from("orders")
       .select("order_id,total")
@@ -48,48 +36,28 @@ router.post("/create-order", async (req, res) => {
       });
     }
 
-    /* 2. planos */
-    const plans = {
-      3500: 3500,
-      5000: 5000,
-      7500: 7500,
-      10000: 10000
-    };
-
-    const extrasPrice = {
-  extra1: 2250,
-  extra2: 1500,
-  extra3: 1000
-};
-
-    /* 3. total correto */
-    let total = plans[Number(plan)] || 0;
+    /* 💰 calcular total */
+    let total = Number(plan) || 0;
 
     safeExtras.forEach(e => {
       total += extrasPrice[e] || 0;
     });
 
-    console.log("TOTAL CALCULADO:", total);
-
-    /* 4. links */
+    /* 🔗 links */
     const links = [];
 
-    if (productLinks[Number(plan)]) {
-      links.push(productLinks[Number(plan)]);
+    if (productLinks[plan]) {
+      links.push(productLinks[plan]);
     }
 
     safeExtras.forEach(e => {
-      if (extrasLinks[e]) {
-        links.push(extrasLinks[e]);
+      if (extrasPrice[e]) {
+        links.push(`LINK_${e.toUpperCase()}`);
       }
     });
 
-    console.log("LINKS GERADOS:", links);
-
-    /* 5. criar ID */
     const orderId = "ORD-" + Date.now();
 
-    /* 6. insert */
     const { data, error } = await supabase
       .from("orders")
       .insert([{
@@ -106,25 +74,19 @@ router.post("/create-order", async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message
-      });
-    }
+    if (error) throw error;
 
     return res.json({
       success: true,
       order_id: orderId,
-      total,
-      order: data
+      total
     });
 
   } catch (err) {
-    console.error("CREATE ORDER ERROR:", err);
+    console.error(err);
     return res.status(500).json({
       success: false,
-      error: "Internal server error"
+      error: "server_error"
     });
   }
 });
@@ -133,22 +95,22 @@ router.post("/create-order", async (req, res) => {
 router.get("/order/:id", async (req, res) => {
   const { id } = req.params;
 
-  const { data: order, error } = await supabase
+  const { data, error } = await supabase
     .from("orders")
     .select("*")
     .eq("order_id", id)
     .single();
 
-  if (error || !order) {
+  if (error || !data) {
     return res.status(404).json({
       success: false,
-      error: "Order not found"
+      error: "not_found"
     });
   }
 
   return res.json({
     success: true,
-    order
+    order: data
   });
 });
 

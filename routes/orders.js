@@ -21,23 +21,34 @@ router.post("/create-order", async (req, res) => {
   try {
     console.log("DADOS RECEBIDOS:", req.body);
 
-    const { name, email, phone, plan, extras } = req.body || {};
+    const {
+      name,
+      email,
+      phone,
+      plan,
+      extras = []
+    } = req.body || {};
 
-const existing = await supabase
-  .from("orders")
-  .select("id")
-  .eq("email", email)
-  .eq("status", "pending")
-  .maybeSingle();
+    /* ✅ NORMALIZAÇÃO (evita bugs futuros) */
+    const safeExtras = Array.isArray(extras) ? extras : [];
 
-if (existing.data) {
-  return res.json({
-    success: true,
-    order_id: existing.data.order_id,
-    total: existing.data.total
-  });
-}
-    
+    /* 🔥 1. verificar pedido pendente */
+    const { data: existing } = await supabase
+      .from("orders")
+      .select("order_id,total")
+      .eq("email", email)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (existing) {
+      return res.json({
+        success: true,
+        order_id: existing.order_id,
+        total: existing.total
+      });
+    }
+
+    /* 2. planos */
     const plans = {
       3500: 3500,
       5000: 5000,
@@ -51,56 +62,49 @@ if (existing.data) {
       extra3: 2250
     };
 
-    /* 1. calcular total */
-    let total = plans[String(plan)] || 0;
+    /* 3. total correto */
+    let total = plans[Number(plan)] || 0;
 
-    if (Array.isArray(extras)) {
-      extras.forEach(e => {
-        total += extrasPrice[e] || 0;
-      });
-    }
+    safeExtras.forEach(e => {
+      total += extrasPrice[e] || 0;
+    });
 
     console.log("TOTAL CALCULADO:", total);
 
-    /* 2. gerar links */
+    /* 4. links */
     const links = [];
 
-    // produto principal
-    if (productLinks[String(plan)]) {
-      links.push(productLinks[String(plan)]);
+    if (productLinks[Number(plan)]) {
+      links.push(productLinks[Number(plan)]);
     }
 
-    // extras
-    if (Array.isArray(extras)) {
-      extras.forEach(e => {
-        if (extrasLinks[e]) {
-          links.push(extrasLinks[e]);
-        }
-      });
-    }
+    safeExtras.forEach(e => {
+      if (extrasLinks[e]) {
+        links.push(extrasLinks[e]);
+      }
+    });
 
     console.log("LINKS GERADOS:", links);
 
-    /* 3. criar ID */
+    /* 5. criar ID */
     const orderId = "ORD-" + Date.now();
 
-    /* 4. guardar no Supabase */
+    /* 6. insert */
     const { data, error } = await supabase
       .from("orders")
-      .insert([
-        {
-          order_id: orderId,
-          name,
-          email,
-          phone,
-          plan,
-          extras,
-          total,
-          status: "pending",
-          download_links: links.join("|")
-        }
-      ])
-      .select();
+      .insert([{
+        order_id: orderId,
+        name,
+        email,
+        phone,
+        plan,
+        extras: safeExtras,
+        total,
+        status: "pending",
+        download_links: links.join("|")
+      }])
+      .select()
+      .single();
 
     if (error) {
       return res.status(500).json({

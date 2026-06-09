@@ -57,10 +57,10 @@ router.post("/create-order", async (req, res) => {
     };
 
     const extrasPrice = {
-      extra1: 1000,
-      extra2: 1500,
-      extra3: 2250
-    };
+  extra1: 2250,
+  extra2: 1500,
+  extra3: 1000
+};
 
     /* 3. total correto */
     let total = plans[Number(plan)] || 0;

@@ -23,6 +23,21 @@ router.post("/create-order", async (req, res) => {
 
     const { name, email, phone, plan, extras } = req.body || {};
 
+const existing = await supabase
+  .from("orders")
+  .select("id")
+  .eq("email", email)
+  .eq("status", "pending")
+  .maybeSingle();
+
+if (existing.data) {
+  return res.json({
+    success: true,
+    order_id: existing.data.order_id,
+    total: existing.data.total
+  });
+}
+    
     const plans = {
       3500: 3500,
       5000: 5000,

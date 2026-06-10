@@ -29,10 +29,8 @@ router.post("/create-order", async (req, res) => {
       extras = []
     } = req.body || {};
 
-    /* ✅ NORMALIZAÇÃO (evita bugs futuros) */
     const safeExtras = Array.isArray(extras) ? extras : [];
 
-    /* 🔥 1. verificar pedido pendente */
     const { data: existing } = await supabase
       .from("orders")
       .select("order_id,total")
@@ -48,7 +46,6 @@ router.post("/create-order", async (req, res) => {
       });
     }
 
-    /* 2. planos */
     const plans = {
       3500: 3500,
       5000: 5000,
@@ -57,12 +54,11 @@ router.post("/create-order", async (req, res) => {
     };
 
     const extrasPrice = {
-  extra1: 2250,
-  extra2: 1500,
-  extra3: 1000
-};
+      extra1: 2250,
+      extra2: 1500,
+      extra3: 1000
+    };
 
-    /* 3. total correto */
     let total = plans[Number(plan)] || 0;
 
     safeExtras.forEach(e => {
@@ -71,7 +67,6 @@ router.post("/create-order", async (req, res) => {
 
     console.log("TOTAL CALCULADO:", total);
 
-    /* 4. links */
     const links = [];
 
     if (productLinks[Number(plan)]) {
@@ -86,25 +81,23 @@ router.post("/create-order", async (req, res) => {
 
     console.log("LINKS GERADOS:", links);
 
-    /* 5. criar ID */
     const orderId = "ORD-" + Date.now();
 
-    /* 6. insert */
     const { data, error } = await supabase
       .from("orders")
-.insert([{
-  order_id: orderId,
-  name,
-  email,
-  phone,
-  plan,
-  extras: safeExtras,
-  total,
-  status: "pending",
-  activity_score: 0,
-  last_active_at: new Date().toISOString(),
-  download_links: links.join("|")
-}])
+      .insert([{
+        order_id: orderId,
+        name,
+        email,
+        phone,
+        plan,
+        extras: safeExtras,
+        total,
+        status: "pending",
+        activity_score: 0,
+        last_active_at: new Date().toISOString(),
+        download_links: links.join("|")
+      }])
       .select()
       .single();
 
@@ -127,6 +120,81 @@ router.post("/create-order", async (req, res) => {
     return res.status(500).json({
       success: false,
       error: "Internal server error"
+    });
+  }
+});
+
+/* ATIVIDADE NA PÁGINA DE PAGAMENTO */
+router.post("/order/:id/activity", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { event } = req.body || {};
+
+    const weights = {
+      payment_page_open: 10,
+      payment_page_visible: 5,
+      copy_entity: 20,
+      copy_reference: 25,
+      copy_amount: 50
+    };
+
+    const points = weights[event] || 0;
+
+    if (!points) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid activity event"
+      });
+    }
+
+    const { data: order, error: findError } = await supabase
+      .from("orders")
+      .select("order_id,status,activity_score")
+      .eq("order_id", id)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (findError) {
+      return res.status(500).json({
+        success: false,
+        error: findError.message
+      });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: "Pending order not found"
+      });
+    }
+
+    const newScore = Number(order.activity_score || 0) + points;
+
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({
+        activity_score: newScore,
+        last_active_at: new Date().toISOString()
+      })
+      .eq("order_id", id)
+      .eq("status", "pending");
+
+    if (updateError) {
+      return res.status(500).json({
+        success: false,
+        error: updateError.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      activity_score: newScore
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message
     });
   }
 });

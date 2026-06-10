@@ -92,17 +92,19 @@ router.post("/create-order", async (req, res) => {
     /* 6. insert */
     const { data, error } = await supabase
       .from("orders")
-      .insert([{
-        order_id: orderId,
-        name,
-        email,
-        phone,
-        plan,
-        extras: safeExtras,
-        total,
-        status: "pending",
-        download_links: links.join("|")
-      }])
+.insert([{
+  order_id: orderId,
+  name,
+  email,
+  phone,
+  plan,
+  extras: safeExtras,
+  total,
+  status: "pending",
+  activity_score: 0,
+  last_active_at: new Date().toISOString(),
+  download_links: links.join("|")
+}])
       .select()
       .single();
 

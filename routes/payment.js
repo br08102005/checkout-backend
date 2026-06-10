@@ -31,13 +31,20 @@ router.post("/payment-webhook", async (req, res) => {
     }
 
     // procurar pedido pendente
-    const { data: orders, error } = await supabase
-      .from("orders")
-      .select("*")
-      .eq("status", "pending")
-      .eq("total", Number(amount))
-      .order("created_at", { ascending: true })
-      .limit(1);
+const TEN_MINUTES = 10 * 60 * 1000;
+
+const cutoff = new Date(
+  Date.now() - TEN_MINUTES
+).toISOString();
+
+const { data: orders, error } = await supabase
+  .from("orders")
+  .select("*")
+  .eq("status", "pending")
+  .eq("total", Number(amount))
+  .gte("created_at", cutoff)
+  .order("created_at", { ascending: true })
+  .limit(20);
 
     if (error || !orders || orders.length === 0) {
       return res.status(404).json({

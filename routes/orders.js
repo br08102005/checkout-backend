@@ -21,14 +21,7 @@ router.post("/create-order", async (req, res) => {
   try {
     console.log("DADOS RECEBIDOS:", req.body);
 
-    const {
-      name,
-      email,
-      phone,
-      plan,
-      extras = []
-    } = req.body || {};
-
+    const { name, email, phone, plan, extras = [] } = req.body || {};
     const safeExtras = Array.isArray(extras) ? extras : [];
 
     const { data: existing } = await supabase
@@ -124,7 +117,6 @@ router.post("/create-order", async (req, res) => {
   }
 });
 
-/* ATIVIDADE NA PÁGINA DE PAGAMENTO */
 router.post("/order/:id/activity", async (req, res) => {
   try {
     const { id } = req.params;
@@ -199,7 +191,6 @@ router.post("/order/:id/activity", async (req, res) => {
   }
 });
 
-/* GET ORDER */
 router.get("/order/:id", async (req, res) => {
   const { id } = req.params;
 

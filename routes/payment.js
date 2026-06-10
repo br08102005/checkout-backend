@@ -48,8 +48,8 @@ router.post("/payment-webhook", async (req, res) => {
       }
     }
 
-    const TEN_MINUTES = 10 * 60 * 1000;
-    const cutoff = new Date(Date.now() - TEN_MINUTES).toISOString();
+    const FIFTEEN_MINUTES = 15 * 60 * 1000;
+    const cutoff = new Date(Date.now() - FIFTEEN_MINUTES).toISOString();
 
     const { data: orders, error } = await supabase
       .from("orders")
@@ -71,7 +71,7 @@ router.post("/payment-webhook", async (req, res) => {
     if (!orders || orders.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "No matching pending order in the last 10 minutes"
+        error: "No matching pending order in the last 15 minutes"
       });
     }
 

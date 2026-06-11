@@ -126,16 +126,19 @@ router.post("/create-order", async (req, res) => {
     console.log("TOTAL CALCULADO:", total);
 
     const links = [];
+const deliveredProducts = [];
 
-    if (productLinks[Number(plan)]) {
-      links.push(productLinks[Number(plan)]);
-    }
+    if (productsData[Number(plan)]) {
+  links.push(productsData[Number(plan)].link);
+  deliveredProducts.push(productsData[Number(plan)]);
+}
 
     safeExtras.forEach(e => {
-      if (extrasLinks[e]) {
-        links.push(extrasLinks[e]);
-      }
-    });
+  if (extrasData[e]) {
+    links.push(extrasData[e].link);
+    deliveredProducts.push(extrasData[e]);
+  }
+});
 
     console.log("LINKS GERADOS:", links);
 
@@ -154,7 +157,8 @@ router.post("/create-order", async (req, res) => {
         status: "pending",
         activity_score: 0,
         last_active_at: new Date().toISOString(),
-        download_links: links.join("|")
+        download_links: links.join("|"),
+delivered_products: JSON.stringify(deliveredProducts)
       }])
       .select()
       .single();

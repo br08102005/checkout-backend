@@ -3,7 +3,9 @@ import express from "express";
 
 const router = express.Router();
 
-/* MAPA DE LINKS */
+/* =========================
+   MAPA DE LINKS
+   ========================= */
 const productLinks = {
   3500: "LINK_PRODUTO_3500",
   5000: "LINK_PRODUTO_5000",
@@ -17,6 +19,16 @@ const extrasLinks = {
   extra3: "LINK_EXTRA_3"
 };
 
+/* =========================
+   FUNÇÃO SEGURA DE DINHEIRO
+   ========================= */
+function safeMoney(value) {
+  return Math.round(Number(value || 0));
+}
+
+/* =========================
+   CREATE ORDER
+   ========================= */
 router.post("/create-order", async (req, res) => {
   try {
     console.log("DADOS RECEBIDOS:", req.body);
@@ -57,6 +69,9 @@ router.post("/create-order", async (req, res) => {
     safeExtras.forEach(e => {
       total += extrasPrice[e] || 0;
     });
+
+    /* 🔥 GARANTIA ABSOLUTA DE INTEIRO */
+    total = safeMoney(total);
 
     console.log("TOTAL CALCULADO:", total);
 
@@ -117,6 +132,9 @@ router.post("/create-order", async (req, res) => {
   }
 });
 
+/* =========================
+   ACTIVITY TRACKING
+   ========================= */
 router.post("/order/:id/activity", async (req, res) => {
   try {
     const { id } = req.params;
@@ -191,6 +209,9 @@ router.post("/order/:id/activity", async (req, res) => {
   }
 });
 
+/* =========================
+   GET ORDER
+   ========================= */
 router.get("/order/:id", async (req, res) => {
   const { id } = req.params;
 

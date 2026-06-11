@@ -4,19 +4,21 @@ import { supabase } from "../supabase.js";
 const router = express.Router();
 
 /* =========================
-   CONVERTE VALORES SMS/BANK
+   CONVERSÃO SEGURA DE VALOR
    ========================= */
 function parseAmount(value) {
   if (value === null || value === undefined) return NaN;
 
-  return Number(
-    String(value)
-      .trim()
-      .replace(/Kz/gi, "")     // remove moeda
-      .replace(/\s/g, "")      // remove espaços (4 500 → 4500)
-      .replace(/\./g, "")      // remove pontos de milhar
-      .replace(",", ".")       // vírgula decimal → ponto
-  );
+  const cleaned = String(value)
+    .trim()
+    .replace(/Kz/gi, "")
+    .replace(/\s/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const number = Number(cleaned);
+
+  return Math.round(number);
 }
 
 /* =========================
@@ -26,7 +28,7 @@ router.post("/payment-webhook", async (req, res) => {
   try {
     const { amount, reference } = req.body;
 
-    /* 1. validar input */
+    // 1. validação básica
     if (!amount) {
       return res.status(400).json({
         success: false,
@@ -43,15 +45,22 @@ router.post("/payment-webhook", async (req, res) => {
       });
     }
 
-    /* 2. evitar duplicados por referência */
+    // 2. evitar duplicados por referência
     if (reference) {
       const cleanReference = String(reference).trim();
 
-      const { data: already } = await supabase
+      const { data: already, error: alreadyError } = await supabase
         .from("orders")
         .select("order_id")
         .eq("payment_reference", cleanReference)
         .maybeSingle();
+
+      if (alreadyError) {
+        return res.status(500).json({
+          success: false,
+          error: alreadyError.message
+        });
+      }
 
       if (already) {
         return res.json({
@@ -62,17 +71,16 @@ router.post("/payment-webhook", async (req, res) => {
       }
     }
 
-    /* 3. janela de tempo (15 min) */
+    // 3. janela de tempo (15 min)
     const FIFTEEN_MINUTES = 15 * 60 * 1000;
     const cutoff = new Date(Date.now() - FIFTEEN_MINUTES).toISOString();
 
-    /* 4. procurar pedido correspondente */
+    // 4. procurar pedido (SEM FLOAT RANGE)
     const { data: orders, error } = await supabase
       .from("orders")
       .select("order_id,total,status,activity_score,last_active_at,created_at")
       .eq("status", "pending")
-      .gte("total", paidAmount - 0.01)
-      .lte("total", paidAmount + 0.01)
+      .eq("total", paidAmount)
       .gte("created_at", cutoff)
       .order("activity_score", { ascending: false })
       .order("last_active_at", { ascending: false })
@@ -92,10 +100,10 @@ router.post("/payment-webhook", async (req, res) => {
       });
     }
 
-    /* 5. escolher melhor candidato */
+    // 5. escolher melhor pedido
     const bestOrder = orders[0];
 
-    /* 6. atualizar como pago */
+    // 6. atualizar como pago
     const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update({
@@ -115,7 +123,7 @@ router.post("/payment-webhook", async (req, res) => {
       });
     }
 
-    /* 7. resposta final */
+    // 7. resposta final
     return res.json({
       success: true,
       message: "Payment confirmed successfully",

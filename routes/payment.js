@@ -1,3 +1,11 @@
+import express from "express";
+import { supabase } from "../supabase.js";
+
+const router = express.Router();
+
+/* =========================
+   CONVERTE VALORES SMS/BANK
+   ========================= */
 function parseAmount(value) {
   if (value === null || value === undefined) return NaN;
 
@@ -6,20 +14,19 @@ function parseAmount(value) {
       .trim()
       .replace(/Kz/gi, "")     // remove moeda
       .replace(/\s/g, "")      // remove espaços (4 500 → 4500)
-      .replace(/\./g, "")      // remove separador de milhar
-      .replace(",", ".")       // decimal europeu → americano
+      .replace(/\./g, "")      // remove pontos de milhar
+      .replace(",", ".")       // vírgula decimal → ponto
   );
 }
 
-import express from "express";
-import { supabase } from "../supabase.js";
-
-const router = express.Router();
-
+/* =========================
+   WEBHOOK
+   ========================= */
 router.post("/payment-webhook", async (req, res) => {
   try {
     const { amount, reference } = req.body;
 
+    /* 1. validar input */
     if (!amount) {
       return res.status(400).json({
         success: false,
@@ -32,25 +39,19 @@ router.post("/payment-webhook", async (req, res) => {
     if (Number.isNaN(paidAmount)) {
       return res.status(400).json({
         success: false,
-        error: "Invalid amount"
+        error: "Invalid amount format"
       });
     }
 
+    /* 2. evitar duplicados por referência */
     if (reference) {
       const cleanReference = String(reference).trim();
 
-      const { data: already, error: alreadyError } = await supabase
+      const { data: already } = await supabase
         .from("orders")
-        .select("order_id,status,payment_reference")
+        .select("order_id")
         .eq("payment_reference", cleanReference)
         .maybeSingle();
-
-      if (alreadyError) {
-        return res.status(500).json({
-          success: false,
-          error: alreadyError.message
-        });
-      }
 
       if (already) {
         return res.json({
@@ -61,14 +62,17 @@ router.post("/payment-webhook", async (req, res) => {
       }
     }
 
+    /* 3. janela de tempo (15 min) */
     const FIFTEEN_MINUTES = 15 * 60 * 1000;
     const cutoff = new Date(Date.now() - FIFTEEN_MINUTES).toISOString();
 
+    /* 4. procurar pedido correspondente */
     const { data: orders, error } = await supabase
       .from("orders")
       .select("order_id,total,status,activity_score,last_active_at,created_at")
       .eq("status", "pending")
-      .eq("total", paidAmount)
+      .gte("total", paidAmount - 0.01)
+      .lte("total", paidAmount + 0.01)
       .gte("created_at", cutoff)
       .order("activity_score", { ascending: false })
       .order("last_active_at", { ascending: false })
@@ -84,37 +88,14 @@ router.post("/payment-webhook", async (req, res) => {
     if (!orders || orders.length === 0) {
       return res.status(404).json({
         success: false,
-        error: "No matching pending order in the last 15 minutes"
+        error: "No matching pending order found"
       });
     }
 
+    /* 5. escolher melhor candidato */
     const bestOrder = orders[0];
-    const secondOrder = orders[1] || null;
 
-    const bestScore = Number(bestOrder.activity_score || 0);
-    const secondScore = secondOrder ? Number(secondOrder.activity_score || 0) : 0;
-
-    if (orders.length > 1 && bestScore <= secondScore) {
-      return res.status(409).json({
-        success: false,
-        error: "Ambiguous payment"
-      });
-    }
-
-    if (orders.length > 1 && bestScore - secondScore < 30) {
-      return res.status(409).json({
-        success: false,
-        error: "Ambiguous payment"
-      });
-    }
-
-    if (bestScore < 50) {
-      return res.status(409).json({
-        success: false,
-        error: "Insufficient payment activity"
-      });
-    }
-
+    /* 6. atualizar como pago */
     const { data: updated, error: updateError } = await supabase
       .from("orders")
       .update({
@@ -124,26 +105,20 @@ router.post("/payment-webhook", async (req, res) => {
       })
       .eq("order_id", bestOrder.order_id)
       .eq("status", "pending")
-      .select("order_id,status")
+      .select("order_id")
       .maybeSingle();
 
-    if (updateError) {
-      return res.status(500).json({
-        success: false,
-        error: updateError.message
-      });
-    }
-
-    if (!updated) {
+    if (updateError || !updated) {
       return res.status(409).json({
         success: false,
         error: "Order already taken"
       });
     }
 
+    /* 7. resposta final */
     return res.json({
       success: true,
-      message: "Payment confirmed safely",
+      message: "Payment confirmed successfully",
       order_id: updated.order_id
     });
 

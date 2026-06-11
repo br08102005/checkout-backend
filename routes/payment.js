@@ -1,3 +1,16 @@
+function parseAmount(value) {
+  if (value === null || value === undefined) return NaN;
+
+  return Number(
+    String(value)
+      .trim()
+      .replace(/Kz/gi, "")     // remove moeda
+      .replace(/\s/g, "")      // remove espaços (4 500 → 4500)
+      .replace(/\./g, "")      // remove separador de milhar
+      .replace(",", ".")       // decimal europeu → americano
+  );
+}
+
 import express from "express";
 import { supabase } from "../supabase.js";
 
@@ -14,9 +27,9 @@ router.post("/payment-webhook", async (req, res) => {
       });
     }
 
-    const paidAmount = Number(amount);
+    const paidAmount = parseAmount(amount);
 
-    if (!paidAmount || Number.isNaN(paidAmount)) {
+    if (Number.isNaN(paidAmount)) {
       return res.status(400).json({
         success: false,
         error: "Invalid amount"

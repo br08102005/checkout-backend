@@ -20,6 +20,56 @@ const extrasLinks = {
 };
 
 /* =========================
+   PRODUTOS COM DETALHES
+   ========================= */
+
+const productsData = {
+  3500: {
+    name: "OnlyFans Larissa Lussaty",
+    image: "logo.jpg",
+    link: "LINK_PRODUTO_3500"
+  },
+
+  5000: {
+    name: "Produto Premium 5000",
+    image: "produto5000.jpg",
+    link: "LINK_PRODUTO_5000"
+  },
+
+  7500: {
+    name: "Produto Premium 7500",
+    image: "produto7500.jpg",
+    link: "LINK_PRODUTO_7500"
+  },
+
+  10000: {
+    name: "Produto Premium 10000",
+    image: "produto10000.jpg",
+    link: "LINK_PRODUTO_10000"
+  }
+};
+
+const extrasData = {
+  extra1: {
+    name: "Galeria de Vazados Nacionais 2025-2026",
+    image: "extra1.jpg",
+    link: "LINK_EXTRA_1"
+  },
+
+  extra2: {
+    name: "Privacy: Maura Rabuda",
+    image: "extra3.jpg",
+    link: "LINK_EXTRA_2"
+  },
+
+  extra3: {
+    name: "GRUPO DE COMBINA🤫🔞",
+    image: "extra4.jpg",
+    link: "LINK_EXTRA_3"
+  }
+};
+
+/* =========================
    FUNÇÃO SEGURA DE DINHEIRO
    ========================= */
 function safeMoney(value) {

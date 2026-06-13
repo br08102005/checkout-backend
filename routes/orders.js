@@ -7,16 +7,16 @@ const router = express.Router();
    MAPA DE LINKS
    ========================= */
 const productLinks = {
-  3500: "LINK_PRODUTO_3500",
-  5000: "LINK_PRODUTO_5000",
-  7500: "LINK_PRODUTO_7500",
-  10000: "LINK_PRODUTO_10000"
+  3500: "https://privatespacelarissalussati.netlify.app/",
+  5000: "https://privatespacelarissalussati.netlify.app/",
+  7500: "https://privatespacelarissalussati.netlify.app/",
+  10000: "https://privatespacelarissalussati.netlify.app/"
 };
 
 const extrasLinks = {
   extra1: "LINK_EXTRA_1",
-  extra2: "LINK_EXTRA_2",
-  extra3: "LINK_EXTRA_3"
+  extra2: "https://privacymaurarabuda.netlify.app/",
+  extra3: "https://chat.whatsapp.com/JGBOaCqbwa4L2ma2K7Z9Xh?mode=gi_t"
 };
 
 /* =========================
@@ -59,13 +59,13 @@ const extrasData = {
   extra2: {
     name: "Privacy: Maura Rabuda",
     image: "extra3.jpg",
-    link: "LINK_EXTRA_2"
+    link: "https://privacymaurarabuda.netlify.app/"
   },
 
   extra3: {
     name: "GRUPO DE COMBINA🤫🔞",
     image: "extra4.jpg",
-    link: "LINK_EXTRA_3"
+    link: "https://chat.whatsapp.com/JGBOaCqbwa4L2ma2K7Z9Xh?mode=gi_t"
   }
 };
 

@@ -27,25 +27,25 @@ const productsData = {
   3500: {
     name: "OnlyFans Larissa Lussaty",
     image: "logo.jpg",
-    link: "LINK_PRODUTO_3500"
+    link: "https://privatespacelarissalussati.netlify.app/"
   },
 
   5000: {
-    name: "Produto Premium 5000",
-    image: "produto5000.jpg",
-    link: "LINK_PRODUTO_5000"
+    name: "OnlyFans Larissa Lussaty",
+    image: "logo.jpg",
+    link: "https://privatespacelarissalussati.netlify.app/"
   },
 
   7500: {
-    name: "Produto Premium 7500",
-    image: "produto7500.jpg",
-    link: "LINK_PRODUTO_7500"
+    name: "OnlyFans Larissa Lussaty",
+    image: "logo.jpg",
+    link: "https://privatespacelarissalussati.netlify.app/"
   },
 
   10000: {
-    name: "Produto Premium 10000",
-    image: "produto10000.jpg",
-    link: "LINK_PRODUTO_10000"
+    name: "OnlyFans Larissa Lussaty",
+    image: "logo.jpg",
+    link: "https://privatespacelarissalussati.netlify.app/"
   }
 };
 
